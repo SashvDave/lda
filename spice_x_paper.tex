@@ -1,0 +1,271 @@
+\documentclass{article}
+\usepackage[utf8]{inputenc}
+\usepackage{geometry}
+\usepackage{graphicx,amsmath,amsfonts,amssymb,fullpage,url,natbib}
+\geometry{
+ a4paper,
+ total={170mm,257mm},
+ left=20mm,
+ top=20mm,
+ }
+\usepackage{graphicx}
+\usepackage{titling}
+\usepackage{subcaption}
+
+\title{SPICE-X: Systematic Probing of Bias with Integrated Contrastive and Global Explanations for LLMs}
+\author{Susannah Su, Soham Gupta, Dinesh Vasireddy, Sashv Dave}
+\date{November 2024}
+\usepackage{natbib}
+\bibliographystyle{plainnat}
+\usepackage{indentfirst}
+
+\usepackage{fancyhdr}
+\fancypagestyle{plain}{%
+    \fancyhf{}
+    \fancyfoot[L]{\thedate}
+    \fancyhead[L]{Checkpoint 3 (Project Group 29)}
+}
+\makeatletter
+\def\@maketitle{%
+  \newpage
+  \null
+  \vskip 1em%
+  \begin{center}%
+    {\LARGE \@title \par}%
+    \vskip 1em%
+  \end{center}%
+  \par
+  \vskip 1em}
+\makeatother
+
+\begin{document}
+
+\maketitle
+
+\begin{center}
+    \theauthor
+\end{center}
+
+\section{Project Overview}
+
+Our research aims to evaluate the efficacy of systematic bias probing as a \textbf{global and contrastive explanation framework} for uncovering biases in Large Language Models (LLMs). We investigate bias probing as a method to surface systematic biases across entire models by comparing response distributions based on demographic attributes (e.g., race, gender). Specifically, we aim to answer: \textbf{How effectively can bias probing, as a contrastive framework, provide actionable insights into the nuanced biases present in LLM responses?}
+
+Bias probing serves as a global explanation method, utilizing comprehensive aggregation to detect biases, with comparisons made between distributions such as $\mathcal{P}(\phi(\text{prompt}_i)|\text{attribute} = A)$ and $\mathcal{P}(\phi(\text{prompt}_i)|\text{attribute} = B)$, where $\phi$ maps LLM responses into higher-level concepts. This positions bias probing within the contrastive explanation framework, allowing us to examine how model behavior varies under different demographic conditions and identify inputs that contribute to biased outcomes.
+
+Our work highlights the dependency of bias results on the chosen concept extraction method. To enhance robustness and interpretability, we have incorporated and refined a set of cross-validation methods for concept extraction, including: 
+\begin{itemize}
+    \item Human-Generated Categories ($\phi_h$)
+    \item Latent Dirichlet Allocation (LDA, $\phi_{\text{LDA}}$)
+    \item Word Embeddings/BERT ($\phi_{\text{Embeddings}}$)
+    \item LLM Self-Labeling ($\phi_{\text{LLM}}$)
+\end{itemize}
+We evaluate alignment across these methods using an agreement score to measure consistency and reliability in bias detection.
+
+At this stage, Checkpoint 3, we have refined our systematic bias probing pipeline to incorporate additional demographic attributes and a range of prompt formats across diverse healthcare tasks. This refined pipeline is instrumental in developing an interactive bias-probing tool that enables users to:
+\begin{enumerate}
+    \item Select a pre-trained LLM
+    \item Input domain-relevant concepts for bias analysis
+    \item Specify demographic attributes for perturbation
+    \item Choose the application context (e.g., healthcare)
+\end{enumerate}
+
+The tool \textit{generates prompt-concept pairs, compares response distributions, and identifies significant biases}. It includes interactive visualizations for (1) comparing concept extraction methods and (2) summarizing detected biases. Our objective is for this tool to provide stakeholders with actionable, explainable insights to inform decisions around LLM deployment and policy implications, supporting the development of more transparent, accountable AI systems.
+
+
+% \section{Methodology Refinements}
+
+\section{Systematic Bias Probing Pipeline}
+
+In this stage, our systematic bias probing pipeline has been refined to address biases across a diverse set of attributes and prompt formats within healthcare tasks, specifically focusing on disease diagnosis, anxiety management, and diet recommendations. With a dataset of 20,000 prompts spanning five racial groups, three gender identities, and both relevant and irrelevant contexts, the pipeline generates comprehensive output distributions to analyze and compare bias.
+
+Our pipeline is structured as follows:
+\begin{enumerate}
+    \item \textbf{Prompt Generation:} We design a set of systematic prompts, $\{\text{prompt}_i\}$, that represent a diverse array of queries across healthcare domains. Prompts are categorized by attribute conditions $A$ and $B$ (e.g., different races or genders). Each prompt is carefully crafted to isolate and test specific biases by varying demographic attributes while holding other variables constant.
+    \item \textbf{Response Collection:} For each prompt $\text{prompt}_i$, we obtain the corresponding response $\text{resp}_i = f(\text{prompt}_i)$ from the LLM. The LLM is chosen from a set of state-of-the-art models, such as OpenAI's GPT-4.
+    \item \textbf{Concept Mapping via Feature Extraction $\phi$:} The raw responses are processed through a feature extraction function $\phi$, which maps responses into higher-level conceptual categories. The mapping $\phi(\text{resp}_i)$ is determined by a set of concept extraction methods (detailed below).
+    \item \textbf{Distribution Analysis and Bias Detection:} For each demographic attribute (e.g., race, gender), we compute the conditional probability distributions $\mathcal{P}(\phi(\text{prompt}_i)|\text{attribute} = A)$ and $\mathcal{P}(\phi(\text{prompt}_i)|\text{attribute} = B)$. We use statistical measures such as Kullback-Leibler (KL) divergence to quantify differences between distributions, thereby detecting and quantifying bias.
+\end{enumerate}
+
+The overarching goal is to create a robust, multi-attribute analysis that provides insights into potential biases at a global level, allowing for comparisons across demographic groups through comprehensive distributional analysis.
+
+\section{Concept Extraction Methods and Cross-Validation}
+
+Our bias probing pipeline depends critically on accurately extracting and categorizing concepts from LLM responses. We employ and cross-validate four primary methods for concept extraction, ensuring robustness and interpretability:
+
+\subsection{Human-Generated Categories ($\phi_h$)}
+We define a set of domain-specific, human-generated categories $\mathcal{C}_h$ based on expert input or common themes within the healthcare domain (e.g., common symptoms or health advice types). The mapping function $\phi_h$ assigns each response to a category within $\mathcal{C}_h$ by keyword matching or semantic similarity. Human-generated categories provide a reliable baseline due to their interpretability and relevance.
+
+\subsection{Latent Dirichlet Allocation (LDA) ($\phi_{\text{LDA}}$)}
+LDA is an unsupervised topic modeling approach that represents each response as a probabilistic mixture of latent topics. Through extensive experimentation, we determined 12 to be the optimal number of topics:
+
+\begin{itemize}
+    \item Our initial exploration tested topic ranges from 5-20, with a particular focus on the 10-15 range where we observed the most promising results. We measured both coherence (topic interpretability) and perplexity (model fit) for each configuration.
+    
+    \item The coherence scores showed a clear peak at k=12, suggesting that this number of topics provided the best balance between specificity and generalizability. Beyond 12 topics, we observed topic fragmentation where semantically similar themes were artificially split.
+    
+    \item While analyzing perplexity scores, we found that improvements plateaued after 12 topics. Additional topics provided diminishing returns in terms of model fit, indicating that 12 topics captured the essential themes in our healthcare response data.
+    
+    \item Our manual review of the topic distributions at k=12 revealed clearly distinguishable themes that aligned well with healthcare domains (e.g., medication management, lifestyle changes, preventive care). These topics remained consistent across multiple training runs.
+    
+    \item To validate our choice, we split our dataset into 5 equal parts and trained the LDA model 5 times, each time holding out a different subset as validation data. This cross-validation approach helped ensure our topic selection wasn't overfitting to any particular subset of responses. The 12-topic model showed consistent performance across all validation sets, with coherence scores varying by less than 5\% between runs.
+\end{itemize}
+
+For our analysis, we:
+\begin{enumerate}
+    \item \textbf{Topic Distribution Analysis:} For each demographic group, we:
+    \begin{itemize}
+        \item Calculate the mean topic distribution across all responses
+        \item Generate topic probability matrices of shape (n_documents × n_topics)
+        \item Extract the top words for each topic with their associated weights
+    \end{itemize}
+
+    \item \textbf{Demographic Bias Visualization:} We create two types of heatmaps using seaborn:
+    \begin{itemize}
+        \item Raw Topic Distribution: Shows the direct probability of each topic across demographic groups
+        \item Relative Topic Importance: Displays standardized scores (in standard deviations from the mean) to highlight demographic biases
+    \end{itemize}
+
+    \item \textbf{Statistical Analysis:} For each topic-demographic pair, we:
+    \begin{itemize}
+        \item Calculate mean topic distributions per demographic group
+        \item Compute standard deviations to identify significant deviations
+        \item Flag notable biases where groups deviate more than one standard deviation from the mean
+    \end{itemize}
+
+    \item \textbf{Intersectional Analysis:} We examine interactions between multiple demographic attributes by:
+    \begin{itemize}
+        \item Creating combined demographic groups (e.g., race_gender combinations)
+        \item Generating heatmaps showing topic distributions across intersectional groups
+        \item Identifying patterns specific to particular demographic intersections
+    \end{itemize}
+
+    \item \textbf{Topic-Prompt Mapping:} To provide concrete examples of bias, we:
+    \begin{itemize}
+        \item Map each response to its dominant topic (highest probability)
+        \item Store topic probabilities and top keywords
+        \item Create CSV files documenting prompt-topic relationships for each category
+        \item Include demographic information and response text for context
+    \end{itemize}
+\end{enumerate}
+
+The visualizations are generated using matplotlib and seaborn, with careful attention to color schemes and normalization. For the heatmaps:
+\begin{itemize}
+    \item Raw distributions use a 'YlOrRd' colormap to show probability intensity
+    \item Relative importance uses a 'RdBu_r' diverging colormap centered at zero
+    \item Annotations show exact values for detailed inspection
+    \item Topic labels include top 3 words for interpretability
+\end{itemize}
+
+This comprehensive visualization approach allows us to:
+\begin{itemize}
+    \item Identify systematic biases across demographic groups
+    \item Quantify the strength and direction of these biases
+    \item Provide interpretable evidence through concrete examples
+    \item Support intersectional analysis of multiple demographic attributes
+\end{itemize}
+
+\subsection{Embedding-Based Clustering ($\phi_{\text{BERT}}$)}
+Using BERT or similar embedding models, we transform responses into embeddings in $\mathbb{R}^d$, capturing semantic content in a high-dimensional space. For concept clustering:
+\begin{itemize}
+    \item We apply Principal Component Analysis (PCA) to reduce the dimensionality of embeddings and visualize clusters.
+    \item We employ agglomerative clustering to group embeddings, with each cluster representing a latent concept $\mathcal{C}_{\text{BERT}}$.
+    \item Each response is mapped to a concept based on its cluster, yielding $\phi_{\text{BERT}}(\text{resp}_i)$. The density and spread of clusters are analyzed for potential demographic variance.
+\end{itemize}
+
+\subsection{LLM Self-Labeling ($\phi_{\text{LLM}}$)}
+The LLM Self-Labeling method leverages the capabilities of a Large Language Model (LLM) to automatically generate high-level concept labels from raw text responses. This approach utilizes the LLM's inherent understanding of language to extract semantically meaningful categories. The self-labeling process is outlined below:\\
+
+\textbf{LLM Prompting for Concept Extraction:}
+\begin{itemize}
+    \item We utilize OpenAI's GPT-4 model to categorize responses. The LLM is prompted to extract categories by providing it with specific instructions. For each response, we ask the model: \textit{"You are a helpful assistant that identifies categories for the given text. Please provide the categories as a simple list."}
+    \item The LLM processes the text and generates a list of relevant categories based on its internal knowledge and contextual understanding.\\
+\end{itemize}
+
+\textbf{Implementation Details:}
+\begin{itemize}
+    \item A custom function interacts with the GPT model using the OpenAI API. This function sends the prompt and retrieves the response, which typically includes a list of categories.
+    \item To ensure the outputs are structured consistently, we apply a post-processing step using a helper function which parses the LLM’s response to extract distinct categories. This function uses regular expressions to identify list items and removes extraneous characters.\\
+\end{itemize}
+
+\textbf{Clustering and Standardization:}
+\begin{itemize}
+    \item Once the LLM generates concept labels, we cluster the outputs into 12 categories to align with other concept extraction methods like LDA and embedding-based clustering.
+    \item We standardized the categories across demographic attributes (e.g., race, gender) by mapping each extracted category to one of the 12 clusters using k-means clustering. This step ensures comparability across different concept extraction methods.
+    \item For each response, the LLM-generated categories are mapped to a single cluster, allowing us to perform cross-method agreement analysis.\\
+\end{itemize}
+
+
+\subsection{Cross-Validation Metrics}
+
+To ensure streamlined consistency and robustness in concept extraction across methods, we introduce the following cross-validation metric to find a "median" of sorts between the different concept extraction methods we have employed in this project. 
+
+\begin{itemize}
+    \item \textbf{Agreement Score:} Measures pairwise agreement between concept extraction methods at the response level. For two methods $\phi_a$ and $\phi_b$, we compute agreement for a response $\text{resp}_i$ as:
+    \[
+    \text{Agree}(\phi_a, \phi_b, \text{resp}_i) = 
+    \begin{cases}
+        1, & \text{if } \phi_a(\text{resp}_i) = \phi_b(\text{resp}_i) \\
+        0, & \text{otherwise}
+    \end{cases}
+    \]
+    The overall agreement score across responses is given by:
+    \[
+    \text{Agreement}(\phi_a, \phi_b) = \frac{1}{n} \sum_{i=1}^n \text{Agree}(\phi_a, \phi_b, \text{resp}_i)
+    \]
+    This score captures the local consistency between methods by indicating how often they assign the same concept label to a given response.
+\end{itemize}
+
+\subsection{Robustness Score}
+
+To assess overall robustness across all concept extraction methods, we define a robustness score as the average agreement across all method pairs:
+\[
+\text{Robustness} = \frac{1}{|S|^2 - |S|} \sum_{\phi_a, \phi_b \in S, \phi_a \neq \phi_b} \text{Agreement}(\phi_a, \phi_b)
+\]
+where $S$ is the set of concept extraction methods. This metric \textbf{averages the agreement scores across all pairs of methods}, providing a comprehensive measure of consistency. Higher robustness indicates greater reliability in concept extraction, as methods consistently align in their categorization of responses.
+
+\section{Preliminary Results \& Progress}
+
+\subsection{Agreement/Robustness Scores}
+As described previously, Agreement Score is a measure of the overlap between different concept extraction methods. For our project we calculated pairwise Agreement Scores between the \textbf{Latent Dirichlet Allocation}, \textbf{Embedding-Based Clustering} and \textbf{LLM Self-Labelling} methods. Since all of these methods output concepts in a different formats, we had to standardize the outputs into a single format (which we choose to be 12 concepts) for comparison. It is important to acknowledge that this may be suboptimal for some concept extraction methods but this tradeoff is necessary in order to identify some level of similarity between methods.
+\\\\
+First we can describe how we transformed all of the outputs for comparison towards the calculation of agreement scores.
+\\\\
+\textbf{LDA} - For Latent Dirichlet Allocation, the output of the model is already broken up into topics. We found 12 to be the ideal number of topics based on the analysis above. 
+\\\\
+\textbf{Embedding Based Clustering} - The Embedding Based Clustering approach outputs points on a graph with the axes PCA 1 and PCA 2 which represent the two principle components found by our principle component analysis. Clustering these points using k-means clustering with $k = 12$ gave us the desired groupings (visualized below in Figure 1).
+\begin{figure}
+    \centering
+    \includegraphics[width=0.5\linewidth]{k-means-embedding.png}
+    \caption{K-Means Clustering for Embeddings}
+    \label{fig:enter-label}
+\end{figure}
+\\\\
+\textbf{LLM Self-Labeling} - \textbf{After creating concept labels for the LLM using the LLM-Self Labeling technique, each prompt input mapped to an array of LLM-identified concepts. We then clustered these concepts together into 12 clusters (to align with the other concept extraction methods). And then for each prompt mapped the output array of concepts to a cluster based on some agreement score. }
+\\\\
+After grouping all of the methods into 12 topics, we need to find a mapping between the topics before we can calculate the agreement score. Using a confusion matrix we can find the most overlap between the clusters of any two concept extraction methods and then apply the Hungarian algorithm to find the optimal matching between these groups. We repeated this for every combination of two groups in our dataset. After this we are able to create a standardized matching for all 3 of the concept extraction methods such that every prompt input maps to some number (0-11) for each concept extraction method. 
+\\\\
+Finally, we can move on to calculating agreement score. For every pair of concept extraction methods (LDA-LLM, LLM-Embeddings, LDA-Embedding) we counted the fraction of prompts that had the same categorization in both methods. For our sample dataset the output was LDA-LLM: 0.151, LLM-Embeddings: 0.139, LDA-Embeddings: 0.291. This result is also plotted in Figure 2.
+\begin{figure}
+    \centering
+    \includegraphics[width=1\linewidth]{agreement scores.png}
+    \caption{Agreement Scores}
+    \label{fig:enter-label}
+\end{figure}
+
+To calculate our Robustness score we simply average the agreement scores. For our sample dataset, the Robustness score outputs to 0.194.
+\pagebreak
+\subsection{Tool Development}
+\textbf{gonna add to this - dinesh}
+
+\section{Next Steps}
+\textbf{need some help on making this one more detailed and paragraphs, just wrote some basic  bullets for now}
+
+\begin{itemize}
+    \item Standardizing outputs for agreement scoring across methods.
+    \item Developing a dynamic, real-time report tool for bias distribution analysis.
+    \item Expanding the scope of analysis to cover additional attributes and healthcare contexts.
+\end{itemize}
+
+\bibliography{references}
+
+\end{document}
